@@ -33,7 +33,7 @@ This Python script requires the `nameparser` package. Install it using pip:
 
 (If you're using Python 3 specifically, you might need to use `pip3`.)
 
-A `requirements.txt`` file will be added soon to simplify dependency management.
+A `requirements.txt` file will be added soon to simplify dependency management.
 
 ## Note
 
