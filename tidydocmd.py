@@ -1,22 +1,49 @@
 """
-Sort entries in a markdown file.
+TidyDocMD: Sort entries in a markdown file.
 
 This script sorts the entries in a markdown file based on the last name of the
-entry.  The script assumes that the entries are organized in sections, with
-each section having a header that starts with a `#` character. The script
-sorts the entries in the sections that are specified in the `--sections`
-argument. The default sections are `Speakers`, `Organizers`, `Mentors`, and
-`Getting Started`.
+entry. The script assumes that the entries are organized in sections, with each
+section having a header that starts with a `#` character. The script sorts the
+entries in the sections that are specified in the `--sections` argument. The
+default sections are `Speakers`, `Organizers`, `Mentors`, and `Getting
+Started`.
 
 The script is designed to work with the following markdown structure:
 https://github.org/fempire/women-tech-speakers-organizers/blob/master/README.md
+
+The script defines a `Section` class that represents a section in a
+markdown-like file.  It captures the hierarchical organization of a document,
+with facilities to manage nested sections. The `Section` class has methods to
+extract the last name from a section name, sort subsections based on last
+names, and generate a string representation of the section in markdown-like
+structure.
+
+The script also includes a helper function `calculate_reshuffle_percentage`
+that calculates the percentage of reshuffled names in a section and prints the
+details of each reshuffled name.
+
+The `parse_file` function parses an input file in markdown-like format and
+generates a tree of nested `Section` objects.
+
+Usage: python tidydocmd.py -i input.md -o output.md \
+    [--sections SECTION1 SECTION2 ...] [--debug]
+
+Arguments:
+- -i input.md: Path to the input markdown file.
+- -o output.md: Path to the output markdown file.
+- --sections: Optional. Specify the sections to sort. Default sections are
+`Speakers`, `Organizers`, `Mentors`, and `Getting Started`.
+- --debug: Optional. Enable debug mode for additional output.
+
+Example: python tidydocmd.py -i input.md -o output.md \
+    --sections Speakers Organizers --debug
+
 """
 
 import argparse
 import logging
 import difflib
 from nameparser import HumanName
-
 # from datetime import datetime
 
 # Configuring logging settings
@@ -156,10 +183,11 @@ class Section:
                         log.info(line)  # Print the reshuffle details
                 else:
                     log.info(
-                        "'%s':'%s': no changes made to the order of %s names",
+                        "'%s':'%s': no changes made to the order of %s name%s",
                         parent_section_name,
                         self.name,
-                        str(len(section_names_before))
+                        str(len(section_names_before)),
+                        "s" if len(section_names_before) != 1 else ""
                     )
             else:
                 log.debug("No H4 subsections in H3 section '%s'", self.name)
@@ -207,29 +235,42 @@ def calculate_reshuffle_percentage(
 ):
     """Calculates the percentage of reshuffled names in a section.
 
-    This function takes in the previous and current section names and calculates the percentage
-    of names that have been reshuffled. It also prints the details of each reshuffled name.
+    This function takes in the previous and current section names and
+    calculates the percentage of names that have been reshuffled. It
+    also prints the details of each reshuffled name.
 
     Args:
         this_section (str): The name of the current section.
         this_parent (str): The name of the parent section.
         section_name_before (list): The list of names before reshuffling.
         section_name_after (list): The list of names after reshuffling.
+
+    Returns:
+        list: A list of strings containing the details of each reshuffled name.
     """
+    # Calculate the difference between the two lists of names
     diff = difflib.ndiff(section_name_before, section_name_after)
+
+    # Find the names that have been moved (reshuffled)
     moved = set(
         line[2:] for line in diff if line.startswith("- ") or line.startswith("+ ")
     )
+
+    # Count the number of reshuffled names
     reshuffled = len(moved)
+
+    # Calculate the reshuffle percentage
     reshuffle_percentage = round(reshuffled / len(section_name_before) * 100)
 
+    # Prepare the output lines
     output_lines = []
     shuffle_mess = (
         f"{this_parent}:{this_section}: alphabetized {reshuffled} of "
         f"{len(section_name_before)} names ({reshuffle_percentage}%):"
     )
     output_lines.append(shuffle_mess)
-    
+
+    # Generate details for each reshuffled name
     for name in moved:
         old_index = section_name_before.index(name)
         new_index = section_name_after.index(name)
@@ -263,7 +304,7 @@ def parse_file(input_path, debug=False):
     for line in lines:
         if line.startswith("#"):
             header_level = len(line) - len(line.lstrip("#"))
-            section_name = line[header_level + 1 :].strip()
+            section_name = line[header_level + 1:].strip()
 
             # Instantiate a new section
             new_section = Section(section_name, header_level)
@@ -305,6 +346,7 @@ def parse_file(input_path, debug=False):
 
 
 if __name__ == "__main__":
+
     # Prepare argument parser
     parser = argparse.ArgumentParser(description="Sorts entries in a markdown file.")
     parser.add_argument("--input", "-i", required=True, help="Input markdown file path")
