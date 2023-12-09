@@ -129,48 +129,40 @@ class Section:
                 # Print the order of the h4 subsections pre- and post-sorting
                 # SOON: implement a less sprawling way of producing this output
                 log.debug(
-                    "Before sorting h4s in h3 section '%s', Parent: '%s', Grandparent: '%s': %s",
+                    "Before sorting H4 subsections in H3 section '%s', Parent: '%s', Grandparent: '%s': %s",
                     self.name,
                     parent_section_name,
                     gp_name,
                     section_names_before,
                 )
                 log.debug(
-                    "After sorting h4s in h3 section '%s', Parent: '%s', Grandparent: '%s': %s",
+                    "After sorting H4 subsections in H3 section '%s', Parent: '%s', Grandparent: '%s': %s",
                     self.name,
                     parent_section_name,
                     gp_name,
                     section_names_after,
                 )
                 if section_names_before != section_names_after:
-                    log.info(
-                        "Before sorting h4s in h3 section '%s', Parent: '%s', Grandparent: '%s': %s",
-                        self.name,
-                        parent_section_name,
-                        gp_name,
-                        section_names_before,
-                    )
-                    log.info(
-                        "After sorting h4s in h3 section '%s', Parent: '%s', Grandparent: '%s': %s",
-                        self.name,
-                        parent_section_name,
-                        gp_name,
-                        section_names_after,
-                    )
-                    calculate_reshuffle_percentage(
+                    # If the order of subsections has changed, calculate
+                    # the percentage of reshuffled names and print the
+                    # details of each reshuffled name.
+                    output_lines = calculate_reshuffle_percentage(
                         self.name,
                         parent_section_name,
                         section_names_before,
                         section_names_after,
                     )
+                    for line in output_lines:
+                        log.info(line)  # Print the reshuffle details
                 else:
                     log.info(
-                        "No change in order of h4s in h3 section '%s', Parent: '%s'",
-                        self.name,
+                        "'%s':'%s': no changes made to the order of %s names",
                         parent_section_name,
+                        self.name,
+                        str(len(section_names_before))
                     )
             else:
-                log.debug("No h4 subsections in h3 section '%s'", self.name)
+                log.debug("No H4 subsections in H3 section '%s'", self.name)
         else:
             log.debug(
                 "Not processing as a chosen H3: '%s' at depth %s with parent '%s'",
@@ -231,21 +223,25 @@ def calculate_reshuffle_percentage(
     reshuffled = len(moved)
     reshuffle_percentage = round(reshuffled / len(section_name_before) * 100)
 
+    output_lines = []
     shuffle_mess = (
-        f"{this_parent}:{this_section}: alphabetized {reshuffled} out of "
+        f"{this_parent}:{this_section}: alphabetized {reshuffled} of "
         f"{len(section_name_before)} names ({reshuffle_percentage}%):"
     )
-    print(shuffle_mess)
+    output_lines.append(shuffle_mess)
+    
     for name in moved:
         old_index = section_name_before.index(name)
         new_index = section_name_after.index(name)
         if old_index == 0:
-            moved_info = f"* {name} (was first, now is after {section_name_after[new_index - 1]})"
+            moved_info = f"* {name} (was first, now after {section_name_after[new_index - 1]})"
         elif new_index == 0:
-            moved_info = f"* {name} (was after {section_name_before[old_index - 1]}, now is first)"
+            moved_info = f"* {name} (was after {section_name_before[old_index - 1]}, now first)"
         else:
-            moved_info = f"* {name} (was after {section_name_before[old_index - 1]}, now is after {section_name_after[new_index - 1]})"
-        print(moved_info)
+            moved_info = f"* {name} (was after {section_name_before[old_index - 1]}, now after {section_name_after[new_index - 1]})"
+        output_lines.append(moved_info)
+
+    return output_lines
 
 
 def parse_file(input_path, debug=False):
